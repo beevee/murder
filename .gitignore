@@ -1,0 +1,5 @@
+highs
+*.log
+*.txt
+*.lp
+*.csv
