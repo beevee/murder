@@ -3,3 +3,5 @@ highs
 *.txt
 *.lp
 *.csv
+.venv
+.env

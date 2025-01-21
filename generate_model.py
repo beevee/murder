@@ -1,10 +1,13 @@
 # import highspy
 import csv
+import os
+import requests
 
 TEAMS_COUNT = 9
 DUELS_PER_DAY = 3
 DUELS_COUNT = TEAMS_COUNT * (TEAMS_COUNT - 1) // 2
 DAYS_COUNT = DUELS_COUNT // DUELS_PER_DAY
+TEAM_PREFS_URL = os.environ.get('TEAM_PREFS_URL')
 
 print('Generating MPS model for %d teams, %d duels in %d days' % (TEAMS_COUNT, DUELS_COUNT, DAYS_COUNT))
 
@@ -70,14 +73,15 @@ with open('model.lp', 'w') as model:
             model.write('  ' + ' + '.join(ys) + ' <= 2\n')
 
     # Consider team preferences
-    with open('team_prefs.csv', 'r') as team_prefs:
-        csv_reader = csv.reader(team_prefs)
-        for t1, row in enumerate(csv_reader):
-            if t1 == 0:
-                continue
-            for d in range(DAYS_COUNT):
-                if row[d+2].startswith('Совсем никак') or row[d+2].startswith('Не очень'):
-                    model.write('  x_d%d_t%d <= 0\n' % (d, t1-1))
+    response = requests.get(TEAM_PREFS_URL)
+    response.raise_for_status()
+    csv_reader = csv.reader(response.text.splitlines())
+    for t1, row in enumerate(csv_reader):
+        if t1 == 0:
+            continue
+        for d in range(DAYS_COUNT):
+            if row[d+2].startswith('Совсем никак'): # or row[d+2].startswith('Не очень'):
+                model.write('  x_d%d_t%d <= 0\n' % (d, t1-1))
 
     # 0≤𝑥𝑑,𝑡≤1 and 0≤𝑦𝑑,𝑡,𝑢≤1.
     model.write('Binary\n  ' + ' '.join(all_x_vars) + ' ' + ' '.join(all_y_vars) + '\n')
